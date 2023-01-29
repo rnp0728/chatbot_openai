@@ -19,7 +19,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   String _chatBotResponse = '';
   bool _isTyping = false;
-  static const apiKey = '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';
+  static const apiKey = '{API-KEY}';
 
   Future<void> getGPT3Response(String input) async {
     print(input);
