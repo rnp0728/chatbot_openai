@@ -1,6 +1,21 @@
 # chatbot
+A Chatbot sample created just for fun..
+The API used is from OpenAI..
 
-A new Flutter project.
+# Some Chat Conversations
+
+<div align = "center">
+  <img height = "900" width ="400" src ="assets/images/demo_ss.png" alt = "chat1">
+</div>
+
+<div align = "center">
+  <img height = "900" width ="400" src ="assets/images/demo_ss1.png" alt = "chat1">
+</div>
+
+<div align = "center">
+  <img height = "900" width ="400" src ="assets/images/demo_ss2.png" alt = "chat1">
+</div>
+
 
 ## Getting Started
 
