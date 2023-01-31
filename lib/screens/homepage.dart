@@ -21,7 +21,7 @@ class _HomeScreenState extends State<HomeScreen> {
   ];
   String _chatBotResponse = '';
   bool _isTyping = false;
-  static const apiKey = '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';
+  static const apiKey = {Provide your API-KEY};
 
   @override
   void initState() {
