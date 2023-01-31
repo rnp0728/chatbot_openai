@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class ChatMessage extends StatelessWidget {
-  ChatMessage({
+  const ChatMessage({
     Key? key,
     required this.text,
     required this.isMe,
@@ -10,14 +10,15 @@ class ChatMessage extends StatelessWidget {
   final String text;
   final bool isMe;
 
-  String myImageUrl =
+  final String myImageUrl =
       'https://tse2.mm.bing.net/th?id=OIP.E4Kcb0Cqmc-hWVSpmS8qjAHaI9&pid=Api&P=0';
-  String botImageUrl =
+  final String botImageUrl =
       'https://tse4.mm.bing.net/th?id=OIP.FJt-FH98RKamoDc2nntVngHaFj&pid=Api&P=0';
 
-  Widget imageShow() {
+  Widget textResults(context) {
     return Expanded(
         child: Card(
+          color: isMe ? Theme.of(context).cardColor : Colors.indigo[400],
       elevation: 5,
       child: Container(
         margin: const EdgeInsets.all(15),
@@ -32,7 +33,7 @@ class ChatMessage extends StatelessWidget {
     ));
   }
 
-  Widget textResults() {
+  Widget imageShow() {
     return Container(
       margin: const EdgeInsets.only(left: 8),
       width: 80,
@@ -54,8 +55,8 @@ class ChatMessage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        isMe ? imageShow() : textResults(),
-        isMe ? textResults() : imageShow(),
+        isMe ? textResults(context) : imageShow(),
+        isMe ? imageShow() : textResults(context) ,
       ],
     );
   }

@@ -1,6 +1,9 @@
 import 'dart:convert';
+import 'package:chatbot/widgets/textfieldwithbutton.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
+import 'package:path/path.dart';
+import 'package:sqflite/sqflite.dart';
 import '../widgets/chatmessage.dart';
 import 'package:http/http.dart' as http;
 
@@ -14,15 +17,19 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final TextEditingController _controller = TextEditingController();
   final List<ChatMessage> _messages = [
-    ChatMessage(text: 'Hi', isMe: false),
+    const ChatMessage(text: 'Ask me Anything....', isMe: false),
   ];
-
   String _chatBotResponse = '';
   bool _isTyping = false;
-  static const apiKey = '{API-KEY}';
+  static const apiKey = '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';
+
+  @override
+  void initState() {
+    super.initState();
+    _getMessagesFromDB();
+  }
 
   Future<void> getGPT3Response(String input) async {
-    print(input);
     final url = Uri.parse('https://api.openai.com/v1/completions');
     final response = await http.post(
       url,
@@ -41,21 +48,31 @@ class _HomeScreenState extends State<HomeScreen> {
     final responseJson = jsonDecode(response.body);
     final responseText = responseJson['choices'][0]['text'];
 
-
     setState(() {
       _chatBotResponse = responseText;
       ChatMessage message = ChatMessage(
         text: _chatBotResponse.trim(),
         isMe: false,
       );
-      setState(() {
-        _messages.insert(0, message);
-        _isTyping = false;
-      });
+      _messages.insert(0, message);
+      _isTyping = false;
     });
+    Database database = await openDatabase(
+      join(await getDatabasesPath(), 'chatbot_db.db'),
+      onCreate: (db, version) {
+        return db.execute(
+          "CREATE TABLE messages (id INTEGER PRIMARY KEY, text TEXT, isMe INTEGER)",
+        );
+      },
+      version: 1,
+    );
+    await database.insert(
+      'messages',
+      {'text': responseText, 'isMe': 0},
+    );
   }
 
-  void _sendMessage() {
+  void _sendMessage() async {
     if (_controller.text.isEmpty) return;
     ChatMessage message = ChatMessage(
       text: _controller.text,
@@ -65,82 +82,110 @@ class _HomeScreenState extends State<HomeScreen> {
       _messages.insert(0, message);
       _isTyping = true;
     });
+
+    Database database = await openDatabase(
+      join(await getDatabasesPath(), 'chatbot_db.db'),
+      onCreate: (db, version) {
+        return db.execute(
+          "CREATE TABLE messages (id INTEGER PRIMARY KEY, text TEXT, isMe INTEGER)",
+        );
+      },
+      version: 1,
+    );
+    await database.insert(
+      'messages',
+      {'text': _controller.text, 'isMe': message.isMe ? 1 : 0},
+    );
     _controller.clear();
-    getGPT3Response(message.text);
+    await getGPT3Response(message.text);
   }
 
-  void insertNewData(String response) {
-    ChatMessage botMessage = ChatMessage(
-      text: response,
-      isMe: true,
+  void _clearDatabase() async {
+    final database = await openDatabase(
+      join(await getDatabasesPath(), 'chatbot_db.db'),
+      onCreate: (db, version) {
+        return db.execute(
+          "CREATE TABLE messages (id INTEGER PRIMARY KEY, text TEXT, isMe INTEGER)",
+        );
+      },
+      version: 1,
     );
+    await database.execute('DELETE FROM messages');
     setState(() {
-      _isTyping = false;
-      _messages.insert(0, botMessage);
+      _messages.clear();
     });
   }
 
-  Widget _buildTextComposer() {
-    return Row(
-      children: [
-        Expanded(
-          child: Padding(
-            padding: const EdgeInsets.all(10.0),
-            child: TextField(
-              controller: _controller,
-              onSubmitted: (value) {
-                _sendMessage();
-              },
-              decoration: const InputDecoration.collapsed(
-                  focusColor: Colors.greenAccent,
-                  hintText: "Feel free to ask....."),
-            ),
-          ),
-        ),
-        ButtonBar(
-          children: [
-            IconButton(
-              color: Colors.indigo,
-              icon: const Icon(Icons.send),
-              onPressed: _sendMessage,
-            ),
-          ],
-        ),
-      ],
+  void _getMessagesFromDB() async {
+    Database database = await openDatabase(
+      join(await getDatabasesPath(), 'chatbot_db.db'),
+      onCreate: (db, version) {
+        return db.execute(
+          "CREATE TABLE messages (id INTEGER PRIMARY KEY, text TEXT, isMe INTEGER)",
+        );
+      },
+      version: 1,
     );
+
+    final List<Map<String, dynamic>> messages =
+        await database.query('messages');
+
+    setState(() {
+      for (int i = messages.length - 1; i >= 0; i--) {
+        var message = messages[i];
+        _messages.add(ChatMessage(
+          text: message['text'],
+          isMe: message['isMe'] == 1,
+        ));
+      }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        appBar: AppBar(
-          title: const Center(
-            child: Text('ChatBot'),
+      appBar: AppBar(
+        title: const Text('ChatBOT'),
+        centerTitle: true,
+        backgroundColor: Colors.indigo,
+        actions: [
+          InkWell(
+            onTap: () {
+              _clearDatabase();
+            },
+            child: Row(
+              children: const [
+                // Text('Clear CHAT',style: TextStyle(color: Colors.teal),),
+                Icon(Icons.delete_sweep_outlined, color: Colors.red,size: 25,),
+                SizedBox(width: 20,)
+              ],
+            ),
+          )
+        ],
+      ),
+      body: Column(
+        children: <Widget>[
+          Expanded(
+            child: ListView.builder(
+              itemCount: _messages.length,
+              reverse: true,
+              itemBuilder: (BuildContext context, int index) {
+                return _messages[index];
+              },
+            ),
           ),
-          backgroundColor: Colors.indigo,
-        ),
-        body: Column(
-          children: [
-            Flexible(
-              child: ListView.builder(
-                physics: const BouncingScrollPhysics(),
-                itemCount: _messages.length,
-                reverse: true,
-                itemBuilder: (ctx, index) {
-                  return _messages[index];
-                },
-              ),
-            ),
-            _isTyping ? const SpinKitThreeBounce(color: Colors.green,) : Container(),
-            const Divider(
-              height: 1.0,
-            ),
-            Container(
-              decoration:
-                  BoxDecoration(borderRadius: BorderRadius.circular(15)),
-              child: _buildTextComposer(),
-            )
-          ],
-        ));
+          _isTyping
+              ? const SpinKitThreeBounce(
+                  color: Colors.blue,
+                  size: 30.0,
+                )
+              : Container(),
+          TextFieldWithButton(
+            controller: _controller,
+            sendMessage: _sendMessage,
+          ),
+        ],
+      ),
+    );
   }
 }
